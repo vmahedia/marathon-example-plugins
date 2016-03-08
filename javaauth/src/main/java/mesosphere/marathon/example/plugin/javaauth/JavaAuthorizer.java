@@ -6,6 +6,7 @@ import mesosphere.marathon.plugin.auth.Authorizer;
 import mesosphere.marathon.plugin.auth.Identity;
 import mesosphere.marathon.plugin.http.HttpRequest;
 import mesosphere.marathon.plugin.http.HttpResponse;
+import org.apache.log4j.Logger;
 
 public class JavaAuthorizer implements Authorizer {
 
@@ -18,17 +19,19 @@ public class JavaAuthorizer implements Authorizer {
     }
 
     private boolean isAuthorized(JavaIdentity principal, Action action, PathId path) {
+        log.debug(String.format("Authorizing user - %s for action - %s on Path - %s", principal.getName(),
+                action.toString(), path.toString()));
         switch (action) {
             case CreateAppOrGroup:
-                return true;
+                return principal.getUserPermissions().isAuthorized("create", path.toString());
             case UpdateAppOrGroup:
-                return principal.getName().contains("ernie");
+                return principal.getUserPermissions().isAuthorized("update", path.toString());
             case DeleteAppOrGroup:
-                return path.toString().startsWith("/test");
+                return principal.getUserPermissions().isAuthorized("delete", path.toString());
             case ViewAppOrGroup:
-                return true;
+                return principal.getUserPermissions().isAuthorized("view", path.toString());
             case KillTask:
-                return false;
+                return principal.getUserPermissions().isAuthorized("kill", path.toString());
             default:
                 return false;
         }
@@ -39,4 +42,6 @@ public class JavaAuthorizer implements Authorizer {
         response.status(403);
         response.body("application/json", "{\"problem\": \"Not Authorized to perform this action!\"}".getBytes());
     }
+
+    static Logger log = Logger.getLogger(JavaAuthorizer.class.getName());
 }
